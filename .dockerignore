@@ -1,0 +1,6 @@
+*.sw?
+.git/
+.gitignore
+Docker*
+Make*
+fuse_interposer_c

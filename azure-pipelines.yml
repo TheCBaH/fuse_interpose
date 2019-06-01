@@ -1,0 +1,29 @@
+# https://aka.ms/yaml
+
+trigger:
+- master
+- devel
+
+jobs:
+  - job:  master
+    pool:
+        vmImage: 'Ubuntu-16.04'
+
+    variables:
+        system.debug: 'false'
+
+    displayName: 'FUSE Interposer'
+    timeoutInMinutes: 120
+    steps:
+        - script: |
+            set -eux
+            make UI=n opam
+          displayName: 'Creade opam Docker'
+        - script: |
+            set -eux
+            make opam.fuse_interposer_c
+          displayName: 'Build fuse_interposer_c'
+        - script: |
+            set -eux
+            make test.fuse_interposer_c
+          displayName: 'Test fuse_interposer_c'

@@ -1,0 +1,95 @@
+FROM ubuntu:18.04
+RUN set -eux;\
+ export http_proxy=$HTTP_PROXY; \
+ apt-get update; apt-get install --no-install-recommends -y \
+ aspcud \
+ autoconf \
+ automake \
+ bubblewrap \
+ build-essential \
+ bzip2 \
+ ca-certificates \
+ cmake \
+ curl \
+ git-core \
+ libc6-dev \
+ ocaml-nox \
+ pkg-config \
+ sudo \
+ unzip \
+ xz-utils \
+ ;\
+ apt-get install --no-install-recommends -y software-properties-common;\
+ add-apt-repository ppa:avsm/ppa;\
+ apt install --no-install-recommends -y opam;\
+ apt remove --auto-remove -y software-properties-common;\
+ apt-get clean;rm -rf /var/lib/apt/lists/*;\
+ echo DONE
+
+ARG USERID
+ARG GROUPID
+ARG USERNAME
+ARG UI
+RUN \
+  set -eux; \
+  groupadd -g $GROUPID $USERNAME; \
+  useradd -m -u $USERID -g $GROUPID $USERNAME; \
+  usermod -aG sudo $USERNAME; \
+  echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers; \
+  echo $USERNAME >/root/USERNAME; \
+  chgrp $GROUPID /root; \
+  chmod g+rx /root; \
+  mkdir /src;\
+  chown $USERNAME /src;\
+  if [ _${UI} != _n ]; then export http_proxy=$HTTP_PROXY; \
+  apt-get update; env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+   elpa-auto-complete \
+   elpa-evil \
+   emacs \
+   less \
+   ocaml-mode \
+   vim-nox \
+   xterm \
+  ; fi ; \
+  echo DONE
+
+USER ${USERNAME}
+RUN set -exu;\
+  cd src;\
+  opam init --disable-sandboxing -a;\
+  eval `opam config env`;\
+  opam install -y dune;\
+  if [ _${UI} != _n ]; then \
+    opam install -y tuareg; \
+    opam install -y merlin; \
+    mkdir -p ~/.emacs.d;\
+    echo "(require 'evil)" >>~/.emacs.d/init.el;\
+    echo "(evil-mode 1)" >>~/.emacs.d/init.el;\
+    echo '(load "/home/'${USERNAME}'/.opam/default/share/emacs/site-lisp/tuareg-site-file")' >>~/.emacs.d/init.el;\
+    printf \
+ '(let ((opam-share (ignore-errors (car (process-lines "opam" "config" "var" "share")))))\n\
+   (when (and opam-share (file-directory-p opam-share))\n\
+    ;; Register Merlin\n\
+    (add-to-list '\''load-path (expand-file-name "emacs/site-lisp" opam-share))\n\
+    (autoload '\''merlin-mode "merlin" nil t nil)\n\
+    ;; Automatically start it in OCaml buffers\n\
+    (add-hook '\''tuareg-mode-hook '\''merlin-mode t)\n\
+    (add-hook '\''caml-mode-hook '\''merlin-mode t)\n\
+    ;; Use opam switch to lookup ocamlmerlin binary\n\
+    (setq merlin-command '\''opam)))\n'>>~/.emacs.d/init.el;\
+  fi; \
+  echo DONE
+RUN set -exu;\
+  export http_proxy=$HTTP_PROXY; \
+  sudo apt-get update; sudo apt-get install --no-install-recommends -y libfuse-dev;\
+  sudo apt-get clean;sudo rm -rf /var/lib/apt/lists/*;\
+  cd src;\
+  git clone https://github.com/astrada/ocamlfuse.git;\
+  cd ocamlfuse;\
+  eval `opam config env`;\
+  opam install --deps-only -y .;\
+  echo DONE
+RUN set -exu;\
+  cd src/ocamlfuse;\
+  opam install -y .;\
+  echo DONE

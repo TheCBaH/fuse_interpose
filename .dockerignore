@@ -1,6 +1,9 @@
+*.db
 *.sw?
 .git/
 .gitignore
+.merlin
 Docker*
 Make*
+_build
 fuse_interposer_c

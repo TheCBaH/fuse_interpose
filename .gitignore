@@ -1,1 +1,4 @@
+*.db
+.merlin
+_build
 fuse_interposer_c

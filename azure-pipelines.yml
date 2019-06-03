@@ -25,5 +25,13 @@ jobs:
           displayName: 'Build fuse_interposer_c'
         - script: |
             set -eux
+            make opam.mtime
+          displayName: 'Build mtime'
+        - script: |
+            set -eux
+            make test.mtime
+          displayName: 'Test mtime'
+        - script: |
+            set -eux
             make test.fuse_interposer_c
           displayName: 'Test fuse_interposer_c'

@@ -1,0 +1,20 @@
+opam-version: "2.0"
+maintainer: "Vladimir N. Silyaev <vsilyaev@gmail.com>"
+authors: [ "Vladimir N. Silyaev" ]
+license: "BSD"
+homepage: "https://github.com/TheCBaH/fuse_interposer"
+dev-repo: "git+https://github.com/TheCBaH/fuse_interposer.git"
+bug-reports: "https://github.com/TheCBaH/fuse_interposerocamlfuse/issues"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "ocaml" {>= "3.08.0"}
+  "base-bigarray"
+  "base-unix"
+  "dune" {build}
+]
+synopsis: " Simple fuse 'interposer' file system "
+description: """
+Simple fuse 'interposer' file system
+"""

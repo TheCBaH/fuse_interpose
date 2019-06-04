@@ -78,31 +78,37 @@ static void mtimedb_uninit(struct mtimedb *db)
     return;
 }
 
-static int mtimedb_match_name(const struct mtimedb *db, unsigned offset, const char *path, unsigned *len)
+static int mtimedb_compare_name(const struct mtimedb *db, unsigned offset, const char *path, unsigned *len)
 {
-    const char *db_name = (const char *)((uint8_t *)db->buf + offset);
+    const unsigned char *db_name = (const unsigned char *)((uint8_t *)db->buf + offset);
     unsigned i;
     bool debug = false;
+    int result = 0;
     for(i=0;;) {
-        char db_ch = db_name[i];
-        char path_ch = path[i];
-        if(debug) {
-            printf("offset:%#x  %c %c\n", offset, path_ch, db_ch);
-        }
+        unsigned char db_ch = db_name[i];
+        unsigned char path_ch = path[i];
         if(db_ch == path_ch) {
             if(db_ch == 0) {
                 *len = i;
-                return 0;
+                break;
             }
             i++;
             continue;
         }
-        if(path_ch=='/' &&  db_ch == 0 ) {
-            *len = i;
-            return 0;
+        if(path_ch=='/') {
+            if( db_ch == 0 ) {
+                *len = i;
+                break;
+            }
+            path_ch = 0;
         }
-        return db_ch - path_ch;
+        result = (int)db_ch - (int)path_ch;
+        break;
     }
+    if(debug) {
+        printf("compare: path:%s name:%s -> %d\n", path, db_name, result);
+    }
+    return result;
 }
 
 struct name_entry {
@@ -124,15 +130,51 @@ static int mtimedb_lookup_level(const struct mtimedb *db, const char *path, unsi
     bool debug=false;
     offset += 4;
     entry = (struct name_entry *)((uint8_t *)db->buf + offset);
+    bool linear = false ;
 
-    for(i=0;i<dirs;i++) {
-        unsigned name_offset = entry[i].name;
-        if(debug) {
-            printf("i=%u dirs=%u\n", i, dirs);
+    if (linear) {
+        for(i=0;i<dirs;i++) {
+            unsigned name_offset = entry[i].name;
+            if(debug) {
+                printf("i=%u dirs=%u\n", i, dirs);
+            }
+            if(mtimedb_compare_name(db, name_offset, path, &result->name_len)==0) {
+                result->entry = entry+i;
+                return 0;
+            }
         }
-        if(mtimedb_match_name(db, name_offset, path, &result->name_len)==0) {
-            result->entry = entry+i;
-            return 0;
+    } else {
+        int left = 0;
+        int right = (int)dirs - 1;
+        for(;;) {
+            unsigned name_offset;
+            int middle;
+            int cmp;
+            if(left>right) {
+                break;
+            }
+            middle = (left + right)/2;
+            name_offset = entry[middle].name;
+            cmp = mtimedb_compare_name(db, name_offset, path, &result->name_len);
+            if(debug) {
+                printf("range [%d,%d,%d] -> %d dirs=%u\n", left, middle, right, cmp, dirs);
+            }
+            if(cmp<0) {
+                left = middle + 1;
+            } else if (cmp>0) {
+                right = middle - 1;
+            } else {
+                result->entry = entry+middle;
+                return 0;
+            }
+        }
+    }
+    if(debug) {
+        for(i=0;i<dirs;i++) {
+            unsigned name_offset = entry[i].name;
+            const char *db_name = (const char *)((uint8_t *)db->buf + name_offset);
+            int cmp = mtimedb_compare_name(db, name_offset, path, &result->name_len);
+            printf("%d %c %s %s\n", cmp, cmp>0?'>':(cmp < 0?'<':'='), path, db_name);
         }
     }
     return -1;
@@ -384,7 +426,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         for(;;) {
-            char buf[256];
+            char buf[4096];
             const char *path = fgets(buf,sizeof(buf),stdin);
             long mtime;
             if(path==NULL) {

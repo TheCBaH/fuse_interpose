@@ -18,8 +18,6 @@
 #define CHECK(call) ({int rc = call; if(rc<0) {return -errno;}rc;})
 
 struct mtimedb {
-    const char *prefix;
-    size_t prefix_len;
     int fd;
     size_t fsize;
     const void *buf;
@@ -31,16 +29,12 @@ static uint32_t mtimedb_read32(const struct mtimedb *db, unsigned offset)
     return *(uint32_t *)((uint8_t *)db->buf + offset);
 }
 
-static int mtimedb_init(struct mtimedb *db, const char *fname, const char *prefix)
+
+
+static int mtimedb_init(struct mtimedb *db, const char *fname)
 {
     struct stat st;
     int rc = open(fname, O_RDONLY);
-
-    if(prefix[0]=='/') {
-        prefix++;
-    }
-    db->prefix = prefix;
-    db->prefix_len = strlen(prefix);
 
     if(rc<0) {
         perror(fname);
@@ -130,7 +124,7 @@ static int mtimedb_lookup_level(const struct mtimedb *db, const char *path, unsi
     bool debug=false;
     offset += 4;
     entry = (struct name_entry *)((uint8_t *)db->buf + offset);
-    bool linear = false ;
+    bool linear = false;
 
     if (linear) {
         for(i=0;i<dirs;i++) {
@@ -188,13 +182,6 @@ static int mtimedb_lookup(const struct mtimedb *db, const char *path, long *mtim
     bool debug = false;
 
     memset(&result, 0, sizeof(result));
-    if(debug) {
-        printf("prefux:%s(%u) path:%s cmp:%d\n", db->prefix, (unsigned)db->prefix_len, path, memcmp(path,db->prefix,db->prefix_len));
-    }
-    if(memcmp(path,db->prefix,db->prefix_len)!=0) {
-        return -1;
-    }
-    path=path+db->prefix_len;
     for(;;) {
         int rc = mtimedb_lookup_level(db, path+path_offset, db_offset, &result);
         if(debug) {
@@ -225,11 +212,11 @@ static void passthru_update_mtime(const char *path, struct stat *st)
 
     if(mtime_db) {
         long mtime=st->st_mtime;
-        int rc = mtimedb_lookup(mtime_db, path+1, &mtime);
+        int rc = mtimedb_lookup(mtime_db, path, &mtime);
+        if(debug) {
+            fprintf(stderr, "path:%s rc:%d\n", path, rc);
+        }
         if(rc==0) {
-            if(debug) {
-                fprintf(stderr, "path:%s rc:%d\n", path, rc);
-            }
             memset(&st->st_mtime, 0, sizeof(*st) - offsetof(struct stat, st_mtime));
             st->st_mtime = mtime;
             st->st_atime = st->st_mtime;
@@ -239,8 +226,20 @@ static void passthru_update_mtime(const char *path, struct stat *st)
     return;
 }
 
+static const char *get_local_path(const char *path)
+{
+    if(path[0]=='/') {
+        path++;
+        if(path[0]==0) {
+            return ".";
+        }
+    }
+    return path;
+}
+
 static int passthru_getattr(const char *path, struct stat *st)
 {
+    path = get_local_path(path);
     CHECK(lstat(path, st));
     passthru_update_mtime(path, st);
     return 0;
@@ -251,26 +250,33 @@ static int passthru_fgetattr(const char *path, struct stat *st,
                         struct fuse_file_info *fi)
 {
     CHECK(fstat(fi->fh, st));
+    path = get_local_path(path);
     passthru_update_mtime(path, st);
     return 0;
 }
 
 static int passthru_access(const char *path, int mask)
 {
+    path = get_local_path(path);
     CHECK(access(path, mask));
     return 0;
 }
 
 static int passthru_readlink(const char *path, char *buf, size_t size)
 {
-    int rc =  CHECK(readlink(path, buf, size - 1));
+    int rc;
+    path = get_local_path(path);
+    rc =  CHECK(readlink(path, buf, size - 1));
     buf[rc] = '\0';
     return 0;
 }
 
 static int passthru_opendir(const char *path, struct fuse_file_info *fi)
 {
-    DIR *dp = opendir(path);
+    DIR *dp;
+    path = get_local_path(path);
+
+    dp = opendir(path);
     if (dp == NULL) {
         return -errno;
     }
@@ -312,7 +318,9 @@ static int passthru_releasedir(const char *path, struct fuse_file_info *fi)
 
 static int passthru_open(const char *path, struct fuse_file_info *fi)
 {
-    int rc = CHECK(open(path, fi->flags));
+    int rc;
+    path = get_local_path(path);
+    rc = CHECK(open(path, fi->flags));
     fi->fh = rc;
     return 0;
 }
@@ -327,6 +335,7 @@ static int passthru_read(const char *path, char *buf, size_t size, off_t offset,
 
 static int passthru_statfs(const char *path, struct statvfs *st)
 {
+    path = get_local_path(path);
     CHECK(statvfs(path, st));
     return 0;
 }
@@ -341,13 +350,17 @@ static int passthru_release(const char *path, struct fuse_file_info *fi)
 static int passthru_getxattr(const char *path, const char *name, char *value,
                     size_t size)
 {
-    int rc = CHECK(lgetxattr(path, name, value, size));
+    int rc;
+    path = get_local_path(path);
+    rc = CHECK(lgetxattr(path, name, value, size));
     return rc;
 }
 
 static int passthru_listxattr(const char *path, char *list, size_t size)
 {
-    int rc = CHECK(llistxattr(path, list, size));
+    int rc;
+    path = get_local_path(path);
+    rc = CHECK(llistxattr(path, list, size));
     return rc;
 }
 
@@ -358,7 +371,20 @@ static int passthru_lock(const char *path, struct fuse_file_info *fi, int cmd,
     return ulockmgr_op(fi->fh, cmd, lock, &fi->lock_owner, sizeof(fi->lock_owner));
 }
 
+static const char *root_path ="/";
+
+static void *passthru_init(struct fuse_conn_info *conn)
+{
+    int rc;
+    UNUSED(conn);
+    rc = chdir(root_path);
+    UNUSED(rc);
+    return NULL;
+}
+
+
 static const struct fuse_operations interposer_ops = {
+    .init       = passthru_init,
     .access	    = passthru_access,
     .fgetattr	= passthru_fgetattr,
     .getattr	= passthru_getattr,
@@ -381,7 +407,6 @@ int main(int argc, char *argv[])
     int rc;
     int cur_arg = 1;
     bool mtime_verbose = false;
-    const char *mtime_prefix="/";
     const char *db_path = NULL;
     bool mtime_lookup = false;
 
@@ -396,8 +421,8 @@ int main(int argc, char *argv[])
             cur_arg+=2;
             continue;
         }
-        if(cur_arg+1<argc && strcmp("--mtime-prefix",arg)==0) {
-            mtime_prefix = argv[cur_arg+1];
+        if(cur_arg+1<argc && strcmp("--root",arg)==0) {
+            root_path = argv[cur_arg+1];
             cur_arg+=2;
             continue;
         }
@@ -414,12 +439,18 @@ int main(int argc, char *argv[])
         break;
     }
     if(db_path) {
-        rc  = mtimedb_init(&db, db_path, mtime_prefix);
+        rc  = mtimedb_init(&db, db_path);
         if(rc<0) {
             return 1;
         }
         mtime_db=&db;
     }
+    rc = chdir(root_path);
+    if(rc!=0) {
+        perror(root_path);
+        goto done;
+    }
+
     if(mtime_lookup) {
         if(mtime_db==NULL) {
             fprintf(stderr,"must speficy mtime database first\n");
@@ -443,7 +474,6 @@ int main(int argc, char *argv[])
         }
         goto done;
     }
-    umask(0);
     if(cur_arg!=1) {
         argv[cur_arg-1] = argv[0];
     }

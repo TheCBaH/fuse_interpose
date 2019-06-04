@@ -39,8 +39,9 @@ test.mtime:
 	time _build/default/mtime.exe --db share.db --path /usr/share
 	_build/default/mtime.exe --db share.db --print --print-mtime >/dev/null
 	du -sh *.db
-	_build/default/mtime.exe --db pwd.db --print|./fuse_interposer_c --mtime pwd.db  --mtime-lookup
-	_build/default/mtime.exe --db share.db --print|./fuse_interposer_c --mtime share.db  --mtime-lookup
+	_build/default/mtime.exe --db pwd.db --print|time ./fuse_interposer_c --mtime pwd.db  --mtime-lookup
+	_build/default/mtime.exe --db share.db --print|time ./fuse_interposer_c --mtime share.db  --mtime-lookup
+	for i in $(shell seq 1 20); do  _build/default/mtime.exe --db share.db --print; done |time --verbose ./fuse_interposer_c --mtime share.db  --mtime-lookup
 
 test.fuse_interposer_c:opam.fuse_interposer_c
 	fusermount -u /tmp/mnt || true

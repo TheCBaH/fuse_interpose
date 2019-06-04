@@ -47,7 +47,7 @@ test.fuse_interposer_c:opam.fuse_interposer_c
 	fusermount -u /tmp/mnt || true
 	mkdir -p /tmp/mnt
 	_build/default/mtime.exe --db /tmp/pwd.db --path ${THIS_DIR}
-	./fuse_interposer_c --mtime /tmp/pwd.db --mtime-prefix ${THIS_DIR}/ -o gid=1  -o uid=$(shell id -u) -o ro -o modules=subdir -o subdir=${THIS_DIR} /tmp/mnt
+	./fuse_interposer_c --mtime /tmp/pwd.db --root ${THIS_DIR} -o gid=1  -o uid=$(shell id -u) -o ro /tmp/mnt
 	ls -al --full-time ${THIS_DIR} >/tmp/ls.orig
 	ls -al --full-time /tmp/mnt >/tmp/ls.mtime
 	time diff -r --no-dereference /${THIS_DIR} /tmp/mnt
@@ -55,14 +55,14 @@ test.fuse_interposer_c:opam.fuse_interposer_c
 	diff -u  /tmp/ls.orig /tmp/ls.mtime || true
 	rm /tmp/ls.orig /tmp/ls.mtime /tmp/pwd.db
 	_build/default/mtime.exe --db bin.db --path /bin
-	./fuse_interposer_c --mtime bin.db --mtime-prefix /bin/ -o gid=1  -o uid=$(shell id -u) -o ro -o modules=subdir -o subdir=/bin /tmp/mnt
+	./fuse_interposer_c --mtime bin.db --root /bin -o gid=1  -o uid=$(shell id -u) -o ro /tmp/mnt
 	time diff -r /bin /tmp/mnt
 	ls -al --full-time /bin >/tmp/ls.orig
 	ls -al --full-time /tmp/mnt >/tmp/ls.mtime
 	fusermount -u /tmp/mnt
 	diff -u /tmp/ls.orig /tmp/ls.mtime || true
 	_build/default/mtime.exe --db share.db --path /usr/share
-	./fuse_interposer_c --mtime share.db --mtime-prefix /usr/share/ -o gid=1  -o uid=$(shell id -u) -o ro -o modules=subdir -o subdir=/usr/share /tmp/mnt
+	./fuse_interposer_c --mtime share.db --root /usr/share -o gid=1  -o uid=$(shell id -u) -o ro /tmp/mnt
 	du -sh /usr/share
 	du -sh /tmp/mnt
 	time diff -r --no-dereference /usr/share /tmp/mnt

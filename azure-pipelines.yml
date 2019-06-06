@@ -17,7 +17,7 @@ jobs:
     steps:
         - script: |
             set -eux
-            make UI=n opam
+            make UI=n UBUNTU_VER=16.04 opam
           displayName: 'Creade opam Docker'
         - script: |
             set -eux
@@ -35,3 +35,11 @@ jobs:
             set -eux
             make test.fuse_interposer_c
           displayName: 'Test fuse_interposer_c'
+        - script: |
+            set -eux
+            make opam.perf_fuse_interposer_c
+          displayName: 'Perf fuse_interposer_c'
+        - script: |
+            set -eux
+            make test.fuse_interposer_c-slow
+          displayName: 'Test fuse_interposer_c-slow'

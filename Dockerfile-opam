@@ -1,11 +1,11 @@
-FROM ubuntu:18.04
+ARG UBUNTU_VER
+FROM ubuntu:${UBUNTU_VER}
 RUN set -eux;\
  export http_proxy=$HTTP_PROXY; \
  apt-get update; apt-get install --no-install-recommends -y \
  aspcud \
  autoconf \
  automake \
- bubblewrap \
  build-essential \
  bzip2 \
  ca-certificates \
@@ -24,6 +24,7 @@ RUN set -eux;\
  apt install --no-install-recommends -y opam;\
  apt remove --auto-remove -y software-properties-common;\
  apt-get clean;rm -rf /var/lib/apt/lists/*;\
+ echo bubblewrap; \
  echo DONE
 
 ARG USERID
@@ -53,11 +54,20 @@ RUN \
   ; fi ; \
   echo DONE
 
+ARG UBUNTU_VER
 USER ${USERNAME}
 RUN set -exu;\
   cd src;\
+  which ocaml;ocaml -version;\
+  which opam;opam --version;\
+  if [ _${UBUNTU_VER} = _16.04 ]; then \
+   curl -o /tmp/install.sh -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh;\
+   (echo;)|sh /tmp/install.sh;\
+   which opam;opam --version;\
+   rm /tmp/*;fi;\
   opam init --disable-sandboxing -a;\
   eval `opam config env`;\
+  which ocaml;ocaml -version;\
   opam install -y dune;\
   if [ _${UI} != _n ]; then \
     opam install -y tuareg; \
@@ -88,8 +98,16 @@ RUN set -exu;\
   cd ocamlfuse;\
   eval `opam config env`;\
   opam install --deps-only -y .;\
+  eval `opam config env`;\
+  which ocaml;ocaml -version;\
   echo DONE
 RUN set -exu;\
   cd src/ocamlfuse;\
   opam install -y .;\
+  echo DONE
+RUN set -eux;\
+  export http_proxy=$HTTP_PROXY; \
+  sudo apt-get update; sudo apt-get install --no-install-recommends -y fuse linux-tools-common;\
+  sudo apt-get install --no-install-recommends -y linux-tools-$(uname -r)||true; \
+  sudo apt-get clean;sudo rm -rf /var/lib/apt/lists/*;\
   echo DONE

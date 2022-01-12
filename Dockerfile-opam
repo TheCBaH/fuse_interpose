@@ -1,7 +1,7 @@
 ARG UBUNTU_VER
 FROM ubuntu:${UBUNTU_VER}
 RUN set -eux;\
- apt-get update; apt-get install --no-install-recommends -y \
+ apt-get update; env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
  aspcud \
  autoconf \
  automake \
@@ -18,7 +18,7 @@ RUN set -eux;\
  unzip \
  xz-utils \
  ;\
- apt-get install --no-install-recommends -y software-properties-common;\
+ env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y software-properties-common;\
  add-apt-repository ppa:avsm/ppa;\
  apt install --no-install-recommends -y opam;\
  apt remove --auto-remove -y software-properties-common;\
@@ -89,7 +89,7 @@ RUN set -exu;\
   fi; \
   echo DONE
 RUN set -exu;\
-  sudo apt-get update; sudo apt-get install --no-install-recommends -y libfuse-dev;\
+  sudo apt-get update; sudo env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y libfuse-dev;\
   sudo apt-get clean;sudo rm -rf /var/lib/apt/lists/*;\
   cd src;\
   git clone https://github.com/astrada/ocamlfuse.git;\
@@ -104,7 +104,7 @@ RUN set -exu;\
   opam install -y .;\
   echo DONE
 RUN set -eux;\
-  sudo apt-get update; sudo apt-get install --no-install-recommends -y fuse linux-tools-common;\
-  sudo apt-get install --no-install-recommends -y linux-tools-$(uname -r)||true; \
+  sudo apt-get update; sudo env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y fuse linux-tools-common;\
+  sudo apt-get env DEBIAN_FRONTEND=noninteractive install --no-install-recommends -y linux-tools-$(uname -r)||true; \
   sudo apt-get clean;sudo rm -rf /var/lib/apt/lists/*;\
   echo DONE

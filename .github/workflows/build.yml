@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: 0 1 * * MON
+  workflow_dispatch:
+
+jobs:
+  fuse_interposer:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+    - name: 'Create opam Docker'
+      run: make UI=n UBUNTU_VER=16.04 opam
+    - name: 'Build fuse_interposer_c'
+      run: make opam.fuse_interposer_c
+    - name: 'Build mtime'
+      run: make opam.mtime
+    - name: 'Test mtime'
+      run: make test.mtime
+    - name: 'Test fuse_interposer_c'
+      run: make test.fuse_interposer_c
+    - name: 'Perf fuse_interposer_c'
+      run: echo make opam.perf_fuse_interposer_c
+    - name: 'Test fuse_interposer_c-slow'
+      run: echo test.fuse_interposer_c-slow

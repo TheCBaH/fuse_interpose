@@ -65,6 +65,7 @@ RUN set -exu;\
    which opam;opam --version;\
    rm /tmp/*;fi;\
   opam init --disable-sandboxing -a;\
+  opam switch create 4.12.1;\
   eval `opam config env`;\
   which ocaml;ocaml -version;\
   opam install -y dune;\

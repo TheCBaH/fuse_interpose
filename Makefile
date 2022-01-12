@@ -8,15 +8,17 @@ THIS_DIR:=${PWD}
 UI?=y
 UBUNTU_VER?=18.04
 
+image=opam
+
 opam:
-	docker build\
+	docker build ${DOCKER_BUILD_OPTS}\
 	 --build-arg GROUPID=${GID}\
 	 --build-arg UBUNTU_VER=${UBUNTU_VER}\
 	 --build-arg UI=${UI}\
 	 --build-arg USERID=${UID}\
 	 --build-arg USERNAME=${USER}\
 	 --build-arg http_proxy\
-	 -f Dockerfile-$(basename $@) -t $(basename $@) .
+	 -f Dockerfile-$(basename $@) -t $@ .
 
 opam.run:
 	docker run --rm -it -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@)
@@ -98,3 +100,6 @@ clean:
 	rm -rf /tmp/mnt
 	rm -rf _build
 	rm -f pwd.db share.db fuse_interposer_c
+
+%.print:
+	echo $($(basename $@))

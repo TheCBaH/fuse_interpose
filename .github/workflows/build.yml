@@ -14,7 +14,23 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
     - name: 'Create opam Docker'
-      run: make UI=n UBUNTU_VER=20.04 opam
+      run: |
+        set -x
+        image=$(make --silent image.print)
+        IMAGE_ID=ghcr.io/$GITHUB_REPOSITORY/$image
+        IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+        old_id=''
+        if docker pull $IMAGE_ID; then
+          old_id=$(docker image inspect $IMAGE_ID --format "{{.ID}}")
+        fi
+        make UI=n DOCKER_BUILD_OPTS="--cache-from=$IMAGE_ID" UBUNTU_VER=20.04 opam
+        new_id=$(docker image inspect $image --format "{{.ID}}")
+        if [ "$old_id" != "$new_id" ]; then
+          echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker tag $image $IMAGE_ID:latest
+          docker push $IMAGE_ID:latest || true
+          rm -rf ~/.docker
+        fi
     - name: 'Build fuse_interposer_c'
       run: make opam.fuse_interposer_c
     - name: 'Build mtime'

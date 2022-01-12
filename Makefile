@@ -67,7 +67,7 @@ opam.perf_fuse_interposer_c:
 	cd /tmp;perf stat -a -e ${PERF_EVENTS} diff -r --no-dereference /tmp/usr /tmp/mnt;\
 	kill $$FUSE;kill -INT  $$PERF;wait||true;echo umount /tmp/mnt'
 
-test.fuse_interposer_c:opam.fuse_interposer_c
+test.fuse_interposer_c.base: opam.fuse_interposer_c
 	fusermount -u /tmp/mnt || true
 	mkdir -p /tmp/mnt
 	_build/default/mtime.exe --db /tmp/pwd.db --path ${THIS_DIR}
@@ -79,6 +79,8 @@ test.fuse_interposer_c:opam.fuse_interposer_c
 	diff -u  /tmp/ls.orig /tmp/ls.mtime || true
 	rm /tmp/ls.orig /tmp/ls.mtime /tmp/pwd.db
 	_build/default/mtime.exe --db bin.db --path /bin
+
+test.fuse_interposer_c: test.fuse_interposer_c.base
 	./fuse_interposer_c --mtime bin.db --root /bin -o gid=1  -o uid=$(shell id -u) -o ro /tmp/mnt
 	time diff -r /bin /tmp/mnt
 	ls -al --full-time /bin >/tmp/ls.orig

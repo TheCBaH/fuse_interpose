@@ -38,7 +38,7 @@ jobs:
     - name: 'Test mtime'
       run: make test.mtime
     - name: 'Test fuse_interposer_c'
-      run: make test.fuse_interposer_c
+      run: make test.fuse_interposer_c.base
     - name: 'Perf fuse_interposer_c'
       run: echo make opam.perf_fuse_interposer_c
     - name: 'Test fuse_interposer_c-slow'

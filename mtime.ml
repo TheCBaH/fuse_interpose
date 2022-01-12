@@ -161,7 +161,7 @@ let read_string a off =
         ch |> Char.chr |> Bytes.set s n;
         read_string_aux a s off (succ n)
       end else
-      String.sub s 0 n
+      Bytes.sub s 0 n
   in
   read_string_aux a s off 0
 
@@ -215,7 +215,7 @@ let print_buf print_mtime printer buf =
           printer(Printf.sprintf "root:%s off:%#x str_off:%#x %d/%d" root off str_off n dir_len);
         let off = off + entry_size in
         let name = read_string buf str_off in
-        let path = Filename.concat root name in
+        let path = Filename.concat root (Bytes.to_string name) in
         let mtime_str =
            if print_mtime then
             let mtime = float_of_int mtime +. base_mtime in
@@ -238,9 +238,9 @@ let create_db path db =
 
 let print_db print_mtime db =
   let fd = Unix.openfile db [Unix.O_RDONLY] 0 in
-  let buf = Bigarray.Array1.map_file fd Bigarray.int8_unsigned Bigarray.c_layout
-              false (-1) in
-  print_buf print_mtime print_endline buf;
+  let buf = Unix.map_file fd Bigarray.int8_unsigned Bigarray.c_layout
+              false [| -1 |] in
+  print_buf print_mtime print_endline (Bigarray.array1_of_genarray buf);
   Unix.close fd
 
 let main () =

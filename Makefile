@@ -9,7 +9,14 @@ UI?=y
 UBUNTU_VER?=18.04
 
 opam:
-	docker build --build-arg USERID=${UID} --build-arg UBUNTU_VER=${UBUNTU_VER} --build-arg UI=${UI} --build-arg GROUPID=${GID} --build-arg USERNAME=${USER} --build-arg HTTP_PROXY=${http_proxy} -f Dockerfile-$(basename $@) -t $(basename $@) .
+	docker build\
+	 --build-arg GROUPID=${GID}\
+	 --build-arg UBUNTU_VER=${UBUNTU_VER}\
+	 --build-arg UI=${UI}\
+	 --build-arg USERID=${UID}\
+	 --build-arg USERNAME=${USER}\
+	 --build-arg http_proxy\
+	 -f Dockerfile-$(basename $@) -t $(basename $@) .
 
 opam.run:
 	docker run --rm -it -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@)

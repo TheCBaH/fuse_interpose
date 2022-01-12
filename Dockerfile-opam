@@ -1,7 +1,6 @@
 ARG UBUNTU_VER
 FROM ubuntu:${UBUNTU_VER}
 RUN set -eux;\
- export http_proxy=$HTTP_PROXY; \
  apt-get update; apt-get install --no-install-recommends -y \
  aspcud \
  autoconf \
@@ -42,15 +41,15 @@ RUN \
   chmod g+rx /root; \
   mkdir /src;\
   chown $USERNAME /src;\
-  if [ _${UI} != _n ]; then export http_proxy=$HTTP_PROXY; \
-  apt-get update; env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-   elpa-auto-complete \
-   elpa-evil \
-   emacs \
-   less \
-   ocaml-mode \
-   vim-nox \
-   xterm \
+  if [ _${UI} != _n ]; then\
+    apt-get update; env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+      elpa-auto-complete \
+      elpa-evil \
+      emacs \
+      less \
+      ocaml-mode \
+      vim-nox \
+      xterm \
   ; fi ; \
   echo DONE
 
@@ -90,7 +89,6 @@ RUN set -exu;\
   fi; \
   echo DONE
 RUN set -exu;\
-  export http_proxy=$HTTP_PROXY; \
   sudo apt-get update; sudo apt-get install --no-install-recommends -y libfuse-dev;\
   sudo apt-get clean;sudo rm -rf /var/lib/apt/lists/*;\
   cd src;\
@@ -106,7 +104,6 @@ RUN set -exu;\
   opam install -y .;\
   echo DONE
 RUN set -eux;\
-  export http_proxy=$HTTP_PROXY; \
   sudo apt-get update; sudo apt-get install --no-install-recommends -y fuse linux-tools-common;\
   sudo apt-get install --no-install-recommends -y linux-tools-$(uname -r)||true; \
   sudo apt-get clean;sudo rm -rf /var/lib/apt/lists/*;\

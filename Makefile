@@ -37,7 +37,7 @@ fuse_interposer_c: fuse_interposer_c.c
 	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
 
 opam.fuse_interposer_c:
-	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image} $(subst .,,$(suffix $@))
+	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image} make $(subst .,,$(suffix $@))
 
 mtime:
 	dune build $@.exe

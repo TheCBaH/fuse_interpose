@@ -7,8 +7,9 @@ TERMINAL:=$(shell test -t 0 && echo t)
 THIS_DIR:=${PWD}
 UI?=y
 UBUNTU_VER?=18.04
+DOCKER_NAMESPACE?=${USER}
 
-image=opam
+image=${DOCKER_NAMESPACE}/opam
 
 opam:
 	docker build ${DOCKER_BUILD_OPTS}\
@@ -18,13 +19,13 @@ opam:
 	 --build-arg USERID=${UID}\
 	 --build-arg USERNAME=${USER}\
 	 --build-arg http_proxy\
-	 -f Dockerfile-$(basename $@) -t $@ .
+	 -f Dockerfile-$(basename $@) -t ${image} .
 
 opam.run:
-	docker run --rm -it -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@)
+	docker run --rm -it -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image}
 
 opam.perf:
-	docker run --cap-add SYS_ADMIN --userns=host --user 0:0 --rm -it -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@) bash -cuex 'cd /tmp;perf stat id'
+	docker run --cap-add SYS_ADMIN --userns=host --user 0:0 --rm -it -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image} bash -cuex 'cd /tmp;perf stat id'
 
 FUSE_CFLAGS= $(shell pkg-config --cflags fuse) -DFUSE_USE_VERSION=26
 FUSE_LDFLAGS= $(shell pkg-config --libs fuse) -lulockmgr
@@ -36,14 +37,14 @@ fuse_interposer_c: fuse_interposer_c.c
 	${CC} -o $@ ${CFLAGS} $< ${LDFLAGS}
 
 opam.fuse_interposer_c:
-	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@) make $(subst .,,$(suffix $@))
+	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image} $(subst .,,$(suffix $@))
 
 mtime:
 	dune build $@.exe
 
 opam.mtime:
-	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@) bash -c 'eval $$(opam env) dune build $(subst .,,$(suffix $@)).exe'
-	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} $(basename $@) bash -c 'eval $$(opam env) dune exec ./$(subst .,,$(suffix $@)).exe -- --help'
+	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image} bash -c 'eval $$(opam env) dune build $(subst .,,$(suffix $@)).exe'
+	docker run --rm -i -w ${THIS_DIR} -v${THIS_DIR}:${THIS_DIR} ${image} bash -c 'eval $$(opam env) dune exec ./$(subst .,,$(suffix $@)).exe -- --help'
 
 
 test.mtime:

@@ -10,6 +10,8 @@ on:
 jobs:
   fuse_interposer:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_NAMESPACE: github_ci
     steps:
     - name: checkout
       uses: actions/checkout@v2
